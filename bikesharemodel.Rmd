@@ -1,0 +1,98 @@
+---
+title: "bike sharem odel"
+output: html_document
+---
+
+# Preprocessing
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+```{data loading}
+bikeshare <- read.csv("NYC_hourly_bike_sharing_201307_201606.csv")
+weather <- read.csv("hourly_weather_20100101_20160809.csv")
+bikeshare$X <- NULL
+weather$X <- NULL
+bike.share <- merge(bikeshare, weather, by=c("day", "dayofweek", "hourofday", "month", "year"))
+
+
+bike.share %>% arrange(year, month, day, hourofday) -> bike.share
+```
+
+
+# Exploratory Data Analysis
+```{year plots}
+bike.share %>% group_by(year, month) %>% summarise(subscriber_yearmon = sum(Subscriber), customer_yearmon = sum(Customer)) -> temp
+temp$yearmon <-paste0(temp$year, "-",  temp$month)
+```
+
+# Regression Tree
+```{regressiontree}
+ library(rpart)
+
+# grow tree
+sub.fit <- rpart(Subscriber ~ . - Customer,
+    method="anova", data=bike.share)
+
+
+printcp(sub.fit) # display the results
+plotcp(sub.fit) # visualize cross-validation results
+summary(sub.fit) # detailed summary of splits
+
+# create additional plots
+par(mfrow=c(1,2)) # two plots on one page
+rsq.rpart(sub.fit) # visualize cross-validation results  
+
+# plot tree
+par(mfrow=c(1,1)) # two plots on one page
+plot(sub.fit, uniform=TRUE,
+   main="Regression Tree for Subscribers ")
+text(sub.fit, use.n=TRUE, all=TRUE, cex=.8)
+
+# prune the tree
+sub.pfit<- prune(sub.fit, cp=0.02) # from cptable   
+
+# plot the pruned tree
+plot(sub.pfit, uniform=TRUE,
+   main="Pruned Regression Tree for Mileage")
+text(sub.pfit, use.n=TRUE, all=TRUE, cex=.8)
+
+
+
+
+# grow tree
+cus.fit <- rpart(Customer ~ . - Subscriber,
+    method="anova", data=bike.share)
+
+
+printcp(cus.fit) # display the results
+plotcp(cus.fit) # visualize cross-validation results
+summary(cus.fit) # detailed summary of splits
+
+# create additional plots
+par(mfrow=c(1,2)) # two plots on one page
+rsq.rpart(cus.fit) # visualize cross-validation results  
+
+# plot tree
+par(mfrow=c(1,1)) # two plots on one page
+plot(cus.fit, uniform=TRUE,
+   main="Regression Tree for Customers ")
+text(cus.fit, use.n=TRUE, all=TRUE, cex=.8)
+
+
+```
+
+```{randomForest}
+library(randomForest)
+
+
+
+# grow tree
+(sub.rf <- rpart(Subscriber ~ . - Customer,
+           data=bike.share))
+
+(cus.rf <- rpart(Customer ~ . - Subscriber,
+                data=bike.share))
+```
+
